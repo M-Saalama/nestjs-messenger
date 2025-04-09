@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { SqsModuleConfig } from './sqs.types';
+import { SqsModuleConfig , SqsMessage } from './sqs.types';
 import {
     SQSClient,
     SendMessageCommand,
@@ -12,6 +12,7 @@ import {
 export class SqsService {
     private readonly sqsClient: SQSClient;
     private readonly queueUrl: string;
+
     constructor(private queueConfig: SqsModuleConfig) {
         this.queueConfig = queueConfig;
         this.sqsClient = new SQSClient({
@@ -23,7 +24,8 @@ export class SqsService {
         });
         this.queueUrl = queueConfig.queueUrl;
     }
-    async send(message: string) {
+    async send(sqsMessage: SqsMessage) {
+        const message: string = JSON.stringify(sqsMessage.message);
         const command = new SendMessageCommand({
             QueueUrl: this.queueUrl,
             MessageBody: message,
@@ -31,34 +33,36 @@ export class SqsService {
         return this.sqsClient.send(command);
     }
 
-    async sendBulk(messages: string[], queueUrl: string) {
+    async sendBulk(SqsMessages: SqsMessage[]) {
+        const messages: string[] = SqsMessages.map((msg) => JSON.stringify(msg.message));
         const entries: SendMessageBatchRequestEntry[] = messages.map((msg, index) => ({
             Id: `${index}`,
             MessageBody: msg,
         }));
 
         const command = new SendMessageBatchCommand({
-            QueueUrl: queueUrl,
+            QueueUrl: this.queueUrl,
             Entries: entries,
         });
 
         return this.sqsClient.send(command);
     }
 
-    async receive(queueUrl: string) {
+    async receive(){
         const command = new ReceiveMessageCommand({
-            QueueUrl: queueUrl,
+            QueueUrl: this.queueUrl,
             MaxNumberOfMessages: 1,
-            WaitTimeSeconds: 10,
         });
-
         const response = await this.sqsClient.send(command);
+        // console.log('response', response);
+        if(response.Messages && response.Messages[0].Body)
+            response.Messages[0].Body = JSON.parse(response.Messages[0].Body);
         return response.Messages?.[0];
     }
 
-    async receiveBulk(queueUrl: string, maxMessages = 10) {
+    async receiveBulk(maxMessages = 10) {
         const command = new ReceiveMessageCommand({
-            QueueUrl: queueUrl,
+            QueueUrl: this.queueUrl,
             MaxNumberOfMessages: maxMessages,
             WaitTimeSeconds: 10,
         });
@@ -67,9 +71,9 @@ export class SqsService {
         return response.Messages || [];
     }
 
-    async delete(receiptHandle: string, queueUrl: string) {
+    async delete(receiptHandle: string) {
         const command = new DeleteMessageCommand({
-            QueueUrl: queueUrl,
+            QueueUrl: this.queueUrl,
             ReceiptHandle: receiptHandle,
         });
 

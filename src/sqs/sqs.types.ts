@@ -4,3 +4,7 @@ export interface SqsModuleConfig {
     secretAccessKey: string;
     queueUrl: string;
 }
+
+export interface SqsMessage {
+    message : Record<string, any>;
+}
