@@ -13,6 +13,8 @@ export class AppController {
   getHello(): string {
     this.sqsService1.printUrl();
     this.sqsService2.printUrl();
+    this.sqsService1.send('Hello from SQS Service 1');
+    this.sqsService2.send('Hello from SQS Service 2');
     return "Hello World!";
   }
 }
