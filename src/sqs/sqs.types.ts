@@ -3,8 +3,10 @@ export interface SqsModuleConfig {
     accessKeyId: string;
     secretAccessKey: string;
     queueUrl: string;
+    isConsumer: boolean;
+    numberOfMessages?: number;
 }
 
-export interface SqsMessage {
-    message : Record<string, any>;
-}
+export type SqsMessage = Record<string, any>;
+
+export type SqsHandler = (message: SqsMessage) => Promise<void> | void;
